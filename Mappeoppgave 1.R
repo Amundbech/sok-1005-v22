@@ -101,54 +101,64 @@ full_list <- full_list %>%
 p1 <- full_list %>% 
   ggplot(aes(x =Year, y = NoPol_lowtrop)) +
   geom_point(size = 0.5) +
+  scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
   labs(subtitle="Temperatur lavere Troposfære", 
        y="Temperatur", 
        x="År", 
        title="") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        panel.grid.minor.y = element_blank()) 
 
 p2 <- full_list %>% 
   ggplot(aes(x = Year, y = NoPol_lowstrat)) +
   geom_point(size = 0.5) +
+  scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
   labs(subtitle = "Temperatur Midtre Tropsfære",
        y="Temperatur", 
        x="År", 
        title="") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        panel.grid.minor.y = element_blank()) 
 
 p3 <- full_list %>% 
   ggplot(aes(x =Year, y = NoPol_midtrop)) +
   geom_point(size = 0.5) +
+  scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
   labs(subtitle = "Temperatur Tropospause",
        y="Temperatur", 
        x="År", 
        title="") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        panel.grid.minor.y = element_blank()) 
 
 p4 <- full_list %>% 
   ggplot(aes(x =Year, y = NoPol_trop)) +
   geom_point(size = 0.5) +
+  scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
   labs(subtitle = "Temperatur lavere stratosfære",
        y="Temperatur", 
        x="År", 
        title="") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        panel.grid.minor.y = element_blank()) 
 
 p5 <- full_list %>% 
   ggplot(aes(x =Year, y = Avg_all)) +
   geom_point(size = 0.5) +
+  scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
   labs(subtitle = "Gjennomsnittlig temperatur",
        y="Temperatur", 
        x="År", 
        title="") +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+        panel.grid.minor.y = element_blank()) 
 
 p1 + p2 + p3 + p4 + p5 +
   plot_layout(ncol = 3, guides = "collect")+
   plot_annotation(title = "Temperatur mellom 60° og 90° nord")
 
-
-
-
-  
-  
