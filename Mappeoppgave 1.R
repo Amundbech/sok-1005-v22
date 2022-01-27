@@ -145,7 +145,9 @@ p5 <- full_list %>%
 
 p1 + p2 + p3 + p4 + p5 +
   plot_layout(ncol = 3, guides = "collect")+
-  plot_annotation(title = "Temperatur mellom 60° og 90° nord")
+  plot_annotation(title = "Temperatur melom 60° og 90° nord")
+
+
 
 
   
