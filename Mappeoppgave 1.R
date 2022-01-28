@@ -102,7 +102,7 @@ p1 <- full_list %>%
   ggplot(aes(x =Year, y = NoPol_lowtrop)) +
   geom_point(size = 0.5) +
   scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
-  labs(subtitle="Temperatur lavere Troposfære", 
+  labs(subtitle="Lavere Troposfære", 
        y="Temperatur", 
        x="År", 
        title="") +
@@ -114,7 +114,7 @@ p2 <- full_list %>%
   ggplot(aes(x = Year, y = NoPol_lowstrat)) +
   geom_point(size = 0.5) +
   scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
-  labs(subtitle = "Temperatur Midtre Tropsfære",
+  labs(subtitle = "Midtre Troposfære",
        y="Temperatur", 
        x="År", 
        title="") +
@@ -126,7 +126,7 @@ p3 <- full_list %>%
   ggplot(aes(x =Year, y = NoPol_midtrop)) +
   geom_point(size = 0.5) +
   scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
-  labs(subtitle = "Temperatur Tropospause",
+  labs(subtitle = "Tropospause",
        y="Temperatur", 
        x="År", 
        title="") +
@@ -138,7 +138,7 @@ p4 <- full_list %>%
   ggplot(aes(x =Year, y = NoPol_trop)) +
   geom_point(size = 0.5) +
   scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
-  labs(subtitle = "Temperatur lavere stratosfære",
+  labs(subtitle = "Lavere stratosfære",
        y="Temperatur", 
        x="År", 
        title="") +
@@ -148,7 +148,7 @@ p4 <- full_list %>%
 
 p5 <- full_list %>% 
   ggplot(aes(x =Year, y = Avg_all)) +
-  geom_point(size = 0.5) +
+  geom_point(size = 0.5) + 
   scale_x_continuous(breaks = seq(from= 1979,to=2021, by = 10)) +
   labs(subtitle = "Gjennomsnittlig temperatur",
        y="Temperatur", 
@@ -160,5 +160,6 @@ p5 <- full_list %>%
 
 p1 + p2 + p3 + p4 + p5 +
   plot_layout(ncol = 3, guides = "collect")+
-  plot_annotation(title = "Temperatur mellom 60° og 90° nord")
+  plot_annotation(title = "Temperatur mellom 60° og 90° nord",
+                  subtitle = "")
 
