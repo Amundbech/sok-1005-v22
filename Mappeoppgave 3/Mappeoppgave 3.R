@@ -1,6 +1,6 @@
 library(tidyverse)
 library(rvest)
-# Gjort i samarbeid med Herman
+# Gjort i samarbeid med Herman og Knut
 
 #Skraper tabellen fra nett
 cars <- read_html("https://www.motor.no/aktuelt/motors-store-vintertest-av-rekkevidde-pa-elbiler/217132")
