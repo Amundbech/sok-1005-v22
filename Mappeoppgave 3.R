@@ -1,14 +1,16 @@
 library(tidyverse)
 library(rvest)
-# Gjort i samarbeid med Herman
+# Gjort i samarbeid med Herman og Knut
 
 #Skraper tabellen fra nett
 cars <- read_html("https://www.motor.no/aktuelt/motors-store-vintertest-av-rekkevidde-pa-elbiler/217132")
 
 tables <- cars %>% html_table(fill=TRUE)
 
+#laster inn tabellen 
 cartable <-  tables[[1]]
 
+#fjerner øvereste rad
 cartable <- cartable[-1,]
 
 #Endrer navn slik at det korresnponderer slik det gjør på nett
@@ -19,7 +21,7 @@ cartable <- cartable %>%
   slice(1:18, 20:25, 27:33)
 
 
-#Rydder i tabbel slik at det kan plottes, da det ikke vil plottes der er km og kWh 
+#Rydder i tabbel slik at det kan plottes, da det ikke vil plottes der det er km og kWh 
 cartable <- cartable %>% 
   separate(`WLTP-tall`, sep = "/", into=c("wltp","kWh"))
 
@@ -27,10 +29,10 @@ cartable$STOPP <- gsub("km","", as.character(cartable$STOPP))
 
 cartable$wltp <- gsub("km","", as.character(cartable$wltp))
 
-# Omdanner tallene til numeric. 
-cartable$wltp <- as.numeric(cartable$wltp)
+# Gjør tallene om til numeric slik at de kan plottes
+cartable$wltp = as.numeric(cartable$wltp)
 
-cartable$STOPP <- as.numeric(cartable$STOPP)
+cartable$STOPP = as.numeric(cartable$STOPP)
 
 # Lager plottet 
 plot1 <- cartable %>% 
