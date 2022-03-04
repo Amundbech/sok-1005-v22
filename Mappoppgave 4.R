@@ -12,7 +12,7 @@ timer <- paste0("https://timeplan.uit.no/emne_timeplan.php?sem=22v&module%5B%5D=
 
 
 
-f <- function(timer) { # Lager en funksjon som leses senere 
+f <- function(timer) { # Lager en funksjon for å lese tabellene 
   page <- read_html(timer)
   table <- html_nodes(page, 'table')  # En tabell per uke
   table <- html_table(table, fill=TRUE) # Tvinger de inn i en liste
@@ -31,7 +31,7 @@ f <- function(timer) { # Lager en funksjon som leses senere
 #Gjør først om til en liste
 timetable <- map(timer, f)
 
-#Gjør listen om til et leselig datasett
+#Gjør listxen om til et leselig datasett
 timetable <- bind_rows(timetable)
 
 # jør dag kolonnen til karakter
