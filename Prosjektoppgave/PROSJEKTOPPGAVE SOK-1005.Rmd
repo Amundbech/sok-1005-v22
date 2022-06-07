@@ -1,0 +1,497 @@
+---
+title: "Prosjektoppgave SOK-1005-v22"
+author: "Kandidatnummer 13, 22 og 45"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Pakker
+
+**Dette er pakkene som blir benyttet for å kunne gjøre analysen og bearbeidet dataen. Tidyverse er en sammensetning av flere forskjellige pakker som er satt sammen til en, her finner vi for eksempel ggplot2 som hjelper oss å plotte.  Lubdridate. Denne gjør det lettere å håndtere datoer i rstudio. gridExtra brukes for å lage tabeller i oppgaven.**
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(gridExtra)
+```
+
+# Datasettene
+
+**Laster inn datasettet som dere har gitt oss. Disse skal vi bruke for å lage en rapport og analyse over alle deres utsalgssted slik at dere kan effektivisere og skape gode bedrifter. For å lese dataen har vi valgt å bruke fread da denne leser filer raskere enn det andre pakker gjør. Det er også mulig å bruke andre koder som for eksempel read.csv. **
+
+**Under finnes altså 6 forskjellige datasett. Det første vi laster inn er "storesattributes". Inne i dette datasettet finner vi egenskapene til alle utsalgsstedene. Som for eksempel butikk nummer, om de er nært en skole eller om det er en drive through.**
+
+**Datasett nummer 2 er "county_crime". Dette datasettet har informasjon om kriminaliteten i de forskjellige byene. Det er også informasjon om hvilke type kriminalitet det har vært og hvor stor andel av befolkningen som er kriminelle.**  
+
+**Tredje datasett er "county_demographic". Her er det informasjon om demografien til de forskjellige fylkene. Datasettet gir innblikk i etnisitetet i befolknigen i hvert av fylkene. Den sier også om hvor stor befolkningen er.** 
+
+**Datasett nummer 4 består av hvordan sysselsettingen er i de forskjellige fylkene. I Appleton County viser datasettet at det er over 10% arbeidsledighet.**
+
+**"weekly_sales" som er dataset nummer 5, her finner vi data om produktene butikkene selger. Her finnes det blant annet profitt, pris og hvor mange enheter som er solgt.** 
+
+**Det siste datasettet er bestående av værdata. Her finner vi data om hvordan været er i de forskjellige fylkene.**
+
+```{r}
+storesattributes <- read.csv("https://data.mendeley.com/public-files/datasets/6htjnfs78b/files/26afd5e7-90b1-4301-ac5e-5905b38c4ec2/file_downloaded")
+
+county_crime <- read.csv("https://data.mendeley.com/public-files/datasets/6htjnfs78b/files/3691994e-2874-4ee6-b215-12e130c96175/file_downloaded")
+
+county_demographic <- read.csv("https://data.mendeley.com/public-files/datasets/6htjnfs78b/files/527e7486-7233-460a-99e0-3529b7cd7d49/file_downloaded")
+
+county_employment <- read.csv("https://data.mendeley.com/public-files/datasets/6htjnfs78b/files/846ac757-721e-4fd9-a414-5871f60de093/file_downloaded")
+
+weekly_sales <- read.csv("https://data.mendeley.com/public-files/datasets/6htjnfs78b/files/b963fdd1-0df9-4257-bd62-65256ec9d57c/file_downloaded")
+
+weekly_weather <- read.csv("https://data.mendeley.com/public-files/datasets/6htjnfs78b/files/b8708b3c-c5e8-456e-83f4-9f23f472a840/file_downloaded")
+```
+
+
+
+# Kombinerering av datasett
+
+**Datasettene er ikke strukturert på samme måte, vi må derfor endre på noen kolonnenavn. Først ser vi på "storesattributes". Så endrer vi navnet på Store_County til County_Name slik at the matcher de andre datasettene. Den mest effektive måten å gjøre dette på er å bruke rename kommandoen.** 
+
+```{r}
+storesattributes <- storesattributes %>% 
+  rename(County_Name = Store_County)
+```
+
+**Så ser vi på de ukentlig salgstallene. Da lager vi en week variabel i "weekly_sales". Slik at vi får en ukesvariabel som vi blir å bruke senere i oppgaven. For dette brukes pakken lubdridate. Pakken lubridate mener vi er den beste innenfor arbeid med datoer og tid. Denne pakken kan sees på som mer effektiv enn basis pakken til rstudio.** 
+
+```{r}
+weekly_sales <- weekly_sales %>% 
+  mutate(Week = lubridate::isoweek(mdy(Date)))
+```
+
+**Deretter begynner vi å samle datasettene sammen. Da starter vi med å slå sammen "weekly_sales" og "storesattributes". Disse slås sammen til ett dataset som vi navngir "all". Vi velger å slå de sammen ved å bruke left_join. Det er denne koden vi vil bruke for å slå sammen alle datasettene til et stort komplett datasett. left_join brukes fordi denne koden slår sammen alle kolonnene, men datasettene må ha noe til felles. I vårt tilfelle så har "weekly_sales" og "storesattributes" Store_num til felles. Store_num er altså butikkens nummer.** 
+
+```{r}
+all <- weekly_sales %>% 
+  left_join(storesattributes, by = c("Store_num" = "Store_Num"))
+```
+
+**Videre slår vi sammen "county_crime", "county_demographic" og "county_employment". Dette gjør vi igjen med left_join og alle bruker variabelen "County_Name". Når disse er slått sammen så mangler vi kun "weekly_weather", dette slår vi sammen i neste del.** 
+
+```{r}
+all <- all %>% 
+  left_join(county_crime, by = "County_Name")
+
+all <- all %>% 
+  left_join(county_demographic, by = "County_Name")
+
+all <- all %>% 
+  left_join(county_employment, by = "County_Name")
+```
+
+**Før vi kombinerer resten med værdataen må vi først gjøre endringer. Vi må bruke mutate og lage en ny variabel innad i datasettet som heter County_Name. Dereter rekoder vi disse værstasjonene til riktig county.**
+
+```{r}
+weekly_weather <- weekly_weather %>% 
+  mutate(County_Name = recode(Weather_Station, "Appleton Airport" = "Appleton County", 
+                              "Lake City Airport" = "Lake County", "North Town Airport" = "Farm County",
+                              "Rail City Airport" = "Rail County", "River City Airport" = "River County"))
+```
+
+**For å fullføre datasettet bruker vi left_join igjen og setter inn "weekly_weather". Nå har vi fått et komplett kombinert datasett.** 
+
+```{r}
+all <- all %>% 
+  left_join(weekly_weather, by = c("Week" = "Weather_Week", "County_Name"))
+```
+
+# Ukentlig salgsrapport
+
+## Power City FreeStand ukentlig profitt
+
+**Vi velger å fokusere på Power City FreeStand i en ukentlig salgsrapport da dette er butikken med størst profit.** 
+
+**Først lager vi et nytt datasett som inneholder butikknavn, dato, uke, profit og margin. Dette gjør vi for å få Power City FreeStands variabler i et eget datasett. Måten vi får FreeStand alene er å bruker filter koden. Deretter søker vi etter butikknummer 2. Filter kommandoen vil da søke i datasettet etter kun de variabelene med butikknummer 2. Dataen vi henter ut vil hjelpe oss med å visualiserere dataen.** 
+
+```{r}
+PowerCity <- all %>% filter(Store_num=="2") %>%
+  select(Store_Name,Date,Week,Profit,Margin)
+```
+
+
+**Deretter lager vi nytt datasett som samler og lager aggregate avprofitt. Dette gjør at vi kan finne ukentlig profitt for Power City FreeStand.** 
+
+```{r}
+SumWeek_Powercity <-
+  aggregate(PowerCity$Profit, 
+            by=list(Week=PowerCity$Week), 
+            FUN=sum) %>%
+  rename(Profit = x)
+```
+
+### Power City FreeStand ukentlig profitt plot
+
+
+**Etter dette kan vi putte disse dataene i et plot.** 
+
+```{r}
+SumWeek_Powercity %>% 
+  ggplot(aes(x=Week,y=Profit)) +
+  geom_line(size=1.1, color='blue')  +
+  geom_point(size=2, color='blue')+
+  scale_x_continuous(breaks=seq(1, 53,1))+
+  theme(axis.text.x = element_text(angle=90)) +
+  theme(axis.text.y = element_text(angle=90, vjust = 1)) +
+  labs(
+    x = "Uke",
+    y = "Fortjeneste",
+    title = "Power City FreeStand ukentlig fortjeneste gjennom et år")
+```
+
+**I plottet over ser vi den ukentlige fortjenesten til Power City FreeStand gjennom et helt år. Vi ser da at profitten til bedriften er varierende. Da ser vi at profitten til bedriften gjennomgår svingninger, bakgrunn for svingningene kan skyldes blant annet helligdager.** 
+**Plottet starter på litt over 55 000 dollar før den går ned til 50 000 dollar i uke 3. Vi ser at profitten topper seg  i uke 17, 18 og 19 som er i begynnelsen av mai. Profitten holder seg relativt høy gjennom sommeren før den rundt uke 30 synker kraftig. Vi ser at i uke 47 treffer den et bunnpunkt. Den tar seg litt opp på slutten av året. Nå har vi sett på Power City FreeStands ukentlige profitt gjennom et år. Vi vil også se på gjennomsnittlig profitt til de andre butikkene, slik at vi kan sammenligne tallene.**
+
+
+### Power City FreeStand ukentlig profitt vs andre bedrifter
+
+
+**For å finne gjennomsnittlig profitt for de andre butikkene legger vi de i et datasett. Så bruker vi aggragate for å summere de og lister de med uker, renamer x til profit og så finner vi gjennomsnittet ved å dele profitten deres på de 9 butikkene.**
+
+
+```{r}
+other_stores <- all %>% filter(Store_num!="2") %>%
+  select(Store_Name,Date,Week,Profit)
+
+week_sum_other_stores <-
+  aggregate(other_stores$Profit, 
+            by=list(Week=other_stores$Week), 
+            FUN=sum) %>%
+  rename(Profit = x)%>%
+  mutate(Mean=Profit/9)
+
+others_profit <- SumWeek_Powercity %>%
+  mutate(Mean = week_sum_other_stores$Mean)
+
+colors <- c("Power City FreeStanding ukentlig profitt" = "Red", "gjennomsnitt profitt andre butikker" = "black")
+
+others_profit %>% 
+  ggplot(aes(x=Week)) +
+  geom_line(aes(y=Profit, color='Power City FreeStanding')) +
+  geom_line(aes(y=Mean, color='Snitt andre butikker')) +
+  geom_point(aes(x=Week,y=Profit), size=2, color='red') +
+  geom_point(aes(x=Week,y=Mean), size=2, color='black') + 
+  scale_x_continuous(breaks=seq(1, 52,1)) +
+  theme(axis.text.x = element_text(angle=90))  +
+  theme(axis.text.y = element_text(angle=90)) +
+  labs(x = "Uke",
+       y = "Fortjeneste",
+       title = "Ukentlig fortjeneste Power City FreeStand og andre bedrifter", color ="") +
+  theme(legend.position = "top") +
+  scale_color_manual(values=colors)
+```
+
+**Over ser vi grafen ukentlig profitt til Power City FreeStand og gjennomsnittlig ukentlig profitt til de 9 andre utsalgsstedene. Det vi da ser er at Power City har vesentlig større profitt enn de andre bedriftene lagt til sammen. Grunnen til at Power City FreeStand gjør det bedre enn de andre kan for eksempel være at befolkningen i byen er større, de har fasiliterer som drive through og det er i nærheten av en skole, der vi kan anta at elevene er store konsumenter. Power City FreeStand er i et eget bygg, mens de andre er for eksempel i et strip mall.** 
+
+
+```{r}
+showpower <- all %>% 
+  filter(Store_num=="2") %>% 
+  select(Store_Name, Store_Near_School, County_Total_Census_Pop, Store_Drive_Through, Store_Location)
+
+str(showpower)
+```
+**Grunnen til at Power City FreeStanding har bedre profitt enn de andre butikkene er for eksempel dette. datasettet viser at Power City FreeStand er nært skole, har en høy populasjon, det er en drive through og butikken er free standing. Dette er faktorer som kan gjøre at Power City FreeStand gjør det bedre enn de andre butikkene på profitt.** 
+
+## Prosentvis endring fra uke 13 til 14
+
+**Videre vil vi også se på om Power City FreeStand har hatt en økning eller nedgang i profitt fra forrige uke. Da har vi valgt å se på uke 14. Vi vil da også se på foregående uke for å sammenligne tallene. Først lager vi en aggragate av profitt for uke 14 og summerer all fortjenesten vi har.**
+
+```{r}
+uke14 <- all %>% filter(Store_num=="2", Week=="14") %>%
+  select(Store_Name,Date,Week,Profit, Margin, Sold, Description)
+```
+
+
+```{r}
+uke14_profit <-
+  aggregate(uke14$Profit , 
+            by=list(Week=uke14$Week), 
+            FUN=sum) %>%
+  rename(Profit = x)
+uke14_profit
+```
+
+**Når dette er gjort ser vi at fortjenesten er på $13 125 dollar. Vi må også da gjøre det samme for uke 13. Første er da å hente inn variablene. Filtrer med butikk nummer 2 og uke 13 slik at vi får de riktige tallene.** 
+
+```{r}
+uke13 <- all %>% filter(Store_num=="2", Week=="13") %>%
+  select(Store_Name,Week,Profit)
+```
+
+**Deretter kan vi summere på samme måte slik vi gjorde med profitten fra uke 14.**
+
+
+```{r}
+uke13_profit <-
+  aggregate(uke13$Profit , 
+            by=list(Week=uke13$Week), 
+            FUN=sum) %>%
+  rename(Profit = x)
+uke13_profit
+```
+
+**Da får vi at profitten i uke 13 var $11 529. For å finne prosentvis økning i profitt fra uke 13 til 14 gjør vi et enkelt mattestykke.**
+
+```{r}
+profit = round(100*(((uke14_profit$Profit)/(uke13_profit$Profit)-1)),1)
+profit
+```
+
+**Da ser vi at det var en økning på 13.8% i profitt fra uke 13 til 14. Grunnen til at profitten deres økte mye denne uken er at datasettet er fra 2012 og i uke 14 dette året var det påske. Så det er mulig å tenke seg at flere mennesker hadde fri denne uken slik at de brukte den på å dra ut som kan ha ført til en økning i salg hos Power City FreeStand.**  
+
+
+## Mest solgte varer
+
+**Vi vil også vise hvilke varer som er populære ved Power City FreeStand, for å gjør dette bruker vi plotly pakken. Denne bruker vi fordi den visualiserer bedre enn det vi klarte å gjøre med tidyverse. Dette er et interaktivt plot som viser alle varene til Power City FreeStand og hvor mange enheter av disse varene som er solgt.** 
+
+```{r, knitr::opts_chunk$set(fig.width=8, fig.height=10)}
+fig <- plot_ly(uke14, x = uke14$Description, y = uke14$Sold, type = 'bar', text = text,
+               marker = list(color = 'rgb(158,202,225)',
+                             line = list(color = 'rgb(8,48,107)',
+                                         width = 1.5)))
+fig <- fig %>% layout(title = "Power City FreeStand solgte varer uke 14",
+                      xaxis = list(title = ""),
+                      yaxis = list(title = ""))
+
+fig
+```
+
+**Over ser vi da alle varene de selger i Power City FreeStand. Man kan se i datasettet at de selger mest potetgull (chips). Dette viser vi nå grafisk, her selger de altså over 700 enheter med chips i uke 14. Dette etterfulgt av value meal 1 (til høyre i grafen). Dette er da en meatball sub med en pose potetgull. Dette selger de over 400 enheter av. Den tredje største er 21oz drink med rett under 400 enheter. Det bedriften da kunne vurdert er å kombinere value meal med potetgull og 21oz drink til en kombinert meny produkt, da dette er produkter som er svært ettertraktet i deres butikk.** 
+
+
+**Da har vi sett på ukentlig salgsrapport for et enkelt utsalgssted. Videre skal vi å se på en månedlig salgsrapport da dette gir oss et bedre helhetsbilde over hvordan selskapet gjør det.**
+
+# Månedlig salgsrapport
+
+## Profitt per måned
+
+**Første vi gjør er å lage et nytt datasett med måned og profitt**
+
+```{r}
+monthlyprofit <- all %>%
+  select(Month,Profit)
+```
+
+**Så gjør vi endring innad i datasettet. Vi må summere månedlig profitt slik at vi kan se hva bedriften tjente per måned.**
+
+```{r}
+monthlyprofit <-monthlyprofit %>%
+  aggregate(monthlyprofit$Profit, 
+            by=list(MonthSUM=monthlyprofit$Month), 
+            FUN=sum) %>%
+  select(-Month)
+```
+
+### Profitt per måned plot
+
+
+```{r}
+monthlyprofit %>%
+  ggplot(aes(x=MonthSUM, y=Profit)) +
+  geom_line(color='blue')  +
+  geom_point(size=1.5, color='blue')+
+  scale_x_continuous(breaks=seq(1, 53,1))+
+  theme(axis.text.x = element_text(vjust = 0.6)) +
+  theme(axis.text.y = element_text(hjust = 1)) + 
+  labs(x = "Måned",
+       y = "Fortjeneste",
+       title = "Månedlig fortjeneste, totalt")
+```
+
+
+**Figuren viser at april og juli er de mest innbringende  månedene for deres selskap Da tjener dere over 3.700.000 dollar. Selskapet tjener mellom 3.5 og 3.8 millioner dollar hver måned. **
+
+## Endring profitt fra juli til august
+
+**Det neste er å vise oppgang eller nedgang i profitt. Vi har valgt å se på profitten til august. Denne måneden er valgt helt tilfeldig. Vi finner profitt for måned på samme måte som vi gjøre med uke. Forskjellen denne gangen er at istedenfor å filtrere for for en spesifikk uke så filtrerer vi etter en spesifikk måned. Deretter bruker vi aggregate for å summere profitten til selskapet. **
+
+```{r}
+augustprofit <- all %>%
+  filter(Month=="8") %>% 
+  select(Profit, Month, Sold, Description)
+
+augustprofit <-
+  aggregate(augustprofit$Profit , 
+            by=list(Month=augustprofit$Month), 
+            FUN=sum) %>%
+  rename(Profit = x)
+augustprofit
+
+```
+
+**Vi kan da se at den totale profitten for august var 275 951 dollar. Vi skal nå også se for juli. **
+
+
+```{r}
+julyprofit <- all %>%
+  filter(Month=="7") %>% 
+  select(Profit, Month )
+
+julyprofit <-
+  aggregate(julyprofit$Profit , 
+            by=list(Month=julyprofit$Month), 
+            FUN=sum) %>%
+  rename(Profit = x)
+julyprofit
+```
+
+**I juli var profitten  358931.8 dollar. Juli hadde altså en mye høyere profitt enn det august hadde under kan du se utregning. Det var en nedgang på `r round(100*(((augustprofit$Profit)/(julyprofit$Profit)-1)),1)`**
+
+
+```{r}
+round(100*(((augustprofit$Profit)/(julyprofit$Profit)-1)),1)
+```
+
+## Prisgrupper
+
+**Nå vil vi vise hvilke prosgrupper dere selger mest fra i august. Dette gjøres med Filter for å sette måneden som august for å så gruppere det i en ny variabel Price_per_item. ifelse må brukes slik at vi kan sette hvilke dollar verdi vi ser etter. Vi lager 9 forskjellieg prisgrupper. **
+
+```{r}
+price_gorup <- all %>%
+  filter(Month =="8") %>% 
+  group_by(Price_per_item = 
+             ifelse(Price <= 1.0, "<1$",
+                    ifelse(Price > 1 & Price <= 2, "1$",
+                           ifelse(Price > 2 & Price <= 3, "2$",
+                                  ifelse(Price > 3 & Price <= 4, "3$",
+                                         ifelse(Price > 4 & Price <= 5, "4$",
+                                                ifelse(Price > 5 & Price <= 6, "5$", 
+                                                       ifelse(Price > 6 & Price <= 7, "6$", 
+                                                              ifelse(Price > 7 & Price <= 8.0, "7$", ">8$"))))))))) %>% 
+  summarise(Sold, Price)
+```
+
+**Deretter kan vi lage et plot av dette.**
+
+### Prisgrupper plot
+
+```{r}
+price_gorup %>% 
+  ggplot(aes(x=Price_per_item, y = Sold))+
+  geom_bar(stat= "identity", fill = "blue") +
+  labs(title = "Totalt salg i prisgrupper, august", 
+       x = "Salg i prisgruppe", 
+       y = "Prisgrupper") +
+  theme_bw()
+```
+
+**I denne ser vi at det er varer i 1 dollar klassen som det selges mest. Over 50.000 varer i denne prisklassen ble solgt i august, etterfulgt av varer til under 1 dollar, dette selges det ca. 25.000 varer av.**
+
+## Profitt per butikk
+
+
+**Videre vil vi se hvordan august måned har vært for hver enkelt butikk i et geom_bar. Dette for å synligjøre bedre hvordan butikker som har høy profitt og lav profitt.**
+
+**Først tar vi å lager et nytt datasett kalt "August_agg". Filtrer igjen men Month=="8" for å velge august. Deretter selekterer vi de variablene vi trenger. Så grupperer vi de vi har lyst å se. for å så summere på profitten.**
+
+```{r}
+August_agg <- all %>% 
+  filter(Month =="8") %>% 
+  select(Store_num, Description, Sold, Sales, Profit, Store_Name, Store_Location) %>% 
+  group_by(Store_Name, Store_num, Store_Location, Profit) %>% 
+  summarise(Sold_units = sum(Sold)) %>% 
+  summarise(Total_store_profit = sum(Profit))
+```
+
+### Profitt per butikk plot
+
+
+**Deretter lager vi et enkelt plot med butikknavnene på x-aksen og deres profitt på y-aksen. **
+
+```{r}
+August_agg %>%
+  ggplot(aes(x=Store_Name,y=Total_store_profit)) +
+  geom_bar(size=1.1, color='Blue', position="dodge", stat="identity")  +
+  theme(axis.text.x = element_text(angle=90)) +
+  theme(axis.text.y = element_text(angle=90, vjust = 1)) +
+  labs(
+    x = "Butikknavn", 
+    y = "Profitt",
+    title = "Profitt per butikk i august")
+
+```
+
+**Det vi ser er at Power City FreeStand  er den mest profitable butikken, med relativt god margin, og at University Towm BigBox er den butikken med lavest profitt i august.**
+
+
+# Oppgave 4 
+
+**Det siste dere ber om er om dere kan bruke dataene til å planlegge nye utsalgssteder. Det mener vi dere kan. Derfor lager vi noen tabeller som viser faktorer som kan påvirke profitten deres. Tabellene vil i tillegg vise prosentvis endring i profitt.**
+
+### Drive Through og profitt
+
+```{r}
+analysis1 <- all %>% 
+  group_by(Store_Drive_Through) %>% 
+  summarise(avg_profit = mean(Profit)) %>% 
+  mutate(percent_diff = round(100 * (avg_profit - lag(avg_profit))/ lag(avg_profit), 2)) %>% 
+  rename('Har butikken drivethrough?' = Store_Drive_Through, 'Gj.snitt ukentlig profitt ' = avg_profit, 'Forskjell i %' = percent_diff)
+grid.table(analysis1)
+```
+
+**Tabellen viser om butikken har drive thourgh og om dette har noe å si for profitten. Vi ser da at butikker med drive through har en 47% større profitt enn de uten.**
+
+### Nært skole og profitt
+
+```{r}
+analysis2 <- all %>% 
+  group_by(Store_Near_School) %>% 
+  summarise(avg_profit = mean(Profit)) %>% 
+  mutate(percent_diff = round(100 * (avg_profit - lag(avg_profit))/ lag(avg_profit), 2)) %>% 
+  rename('Er butikken nært skole?' = Store_Near_School, 'Gj.snitt profitt ' = avg_profit, 'Forskjell i %' = percent_diff)
+grid.table(analysis2)
+```
+
+**Denne viser at om butikken som er nært skole har nesten 35% mer profitt enn de som ikke er nært en skole.**
+
+### Værdata og profitt
+
+```{r}
+analysis3 <- all %>% 
+  group_by(Weather_Bad_Weather_Week) %>% 
+  filter(!any(is.na(Weather_Bad_Weather_Week))) %>% 
+  summarise(avg_profit = mean(Profit)) %>% 
+  mutate(percent_diff = round(100 * (avg_profit - lag(avg_profit))/ lag(avg_profit), 2)) %>% 
+  rename('Dårlig vær uke?' = Weather_Bad_Weather_Week, 'Gj.snitt  profitt ' = avg_profit, 'Forskjell i %' = percent_diff)
+grid.table(analysis3)
+```
+
+**Den siste tabellen ser på om det er uker med dårlig eller bra vær. Da kan vi se at i uker der det er dårlig vær vil gjennomsnittlig profitt være nede 12.75%**
+
+### Lokasjon og profitt
+
+```{r}
+analysis4 <- all %>% 
+  group_by(Store_Location) %>% 
+  summarise(avg_profit = mean(Profit)) %>% 
+  mutate(percent_diff = round(100 * (avg_profit - lag(avg_profit))/ lag(avg_profit), 2)) %>% 
+  rename('Butikk lokasjon' = Store_Location, 'Gj.snitt  profitt ' = avg_profit, 'Forskjell i %' = percent_diff)
+grid.table(analysis4)
+```
+
+
+
+**Den siste analysen vi gjør viser om lokasjon har noe å si. Bedriftene deres har 3 forskjellige lokasjoner. Dette er BigBox, Free Standing og Strip Mall. Da kan vi se at Free Standing er den som har mest fortjeneste av alle, det er verdt å merke at dere kun har 1 butikk som er free standing. Vi ser også at butikker i Bog Box har lavest gjennomsnittlig profitt av alle, derfor bør dere kanskje vurdere å ikke sette nye bedrfiter i disse bygnigene og heller satse på free standing og strip malls.**
+
+## Konklusjon
+
+**Nå har vi sett på noen faktorer som kan påvirke profitten til bedriften. Da kan det se ut til at profitten kan bli påvirket av flere forskjellige faktorer. For å finne neste lokasjon bør dere ha en bedrift som har en drive through, er nært en skole, har minst mulig dårlig vær uker og den bør være free standing. Bedriften kan også være i Strip Mall, og helst unngå Big Box da dette er de som tjener gjennomsnittlig minst. **
+
+
+
+
+
